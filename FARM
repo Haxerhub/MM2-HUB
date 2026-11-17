@@ -1,0 +1,521 @@
+local _version = "1.6.66"
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+end)
+
+if not success or not WindUI then
+    warn("Error al cargar WindUI. Reintentando...")
+    task.wait(1)
+    WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+end
+
+local ABBSHUB_UI = WindUI
+
+pcall(function()
+    ABBSHUB_UI:AddTheme({
+        Name = "ABBSTheme",
+        Primary = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(240, 240, 240),
+        Background = Color3.fromRGB(15, 15, 15),
+        BackgroundTransparency = 0.2,
+        Hover = Color3.fromRGB(30, 30, 30),
+        Text = Color3.fromRGB(240, 240, 240),
+        DarkText = Color3.fromRGB(170, 170, 170),
+    })
+end)
+
+pcall(function() ABBSHUB_UI:SetNotificationLower(true) end)
+
+local ABBSHUB = ABBSHUB_UI:CreateWindow({
+    Title = "ABBS HUB | MM2 <font color='#FFD700'>[BETA]</font>",
+    Author = "BY FXZLE",
+    Folder = "ABBSHUB",
+    Acrylic = false,
+    Transparent = false,
+    NewElements = true,
+    HideSearchBar = false,
+    Background = "rbxassetid://10039618734",
+    BackgroundImageTransparency = 0.55,
+    OpenButton = {
+        Title = "ABBS HUB",
+        Icon = "swords",
+        CornerRadius = UDim.new(0, 14),
+        StrokeThickness = 1.1,
+        Enabled = true,
+        Draggable = true,
+        Scale = 0.9,
+        Color = ColorSequence.new(Color3.fromRGB(20, 20, 20), Color3.fromRGB(0, 0, 0))
+    },
+    Topbar = { Height = 44, ButtonsType = "Default" }
+})
+
+pcall(function() ABBSHUB:SetSize(UDim2.fromOffset(580, 460)) end)
+pcall(function() ABBSHUB_UI:SetTheme("ABBSTheme") end)
+
+task.spawn(function()
+    local CoreGui = game:GetService("CoreGui")
+    local Players = game:GetService("Players")
+    local bgIds = {"rbxassetid://10039618734"}
+    local bgImage = nil
+    for i = 1, 60 do
+        for _, v in ipairs(CoreGui:GetDescendants()) do
+            if v:IsA("ImageLabel") and v.Size.X.Scale > 0.5 then
+                bgImage = v
+                break
+            end
+        end
+        if Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui") then
+            for _, v in ipairs(Players.LocalPlayer.PlayerGui:GetDescendants()) do
+                if v:IsA("ImageLabel") and v.Size.X.Scale > 0.5 then
+                    bgImage = v
+                    break
+                end
+            end
+        end
+        if bgImage then break end
+        task.wait(0.2)
+    end
+    if not bgImage then return end
+    bgImage.Image = bgIds[1]
+    bgImage.ImageTransparency = 0.55
+end)
+
+local Home = ABBSHUB:Tab({ Title = "HOME", Icon = "house" })
+local Visuales = ABBSHUB:Tab({ Title = "VISUALES", Icon = "eye" })
+local RolesTab = ABBSHUB:Tab({ Title = "ROLES", Icon = "users" })
+local FarmTab = ABBSHUB:Tab({ Title = "FARM", Icon = "coins" })
+local TrollTab = ABBSHUB:Tab({ Title = "ACCIONES", Icon = "zap" })
+local Settings = ABBSHUB:Tab({ Title = "SETTINGS", Icon = "settings" })
+
+Home:Section({ Title = "BIENVENIDO", Icon = "user" })
+Home:Paragraph({
+    Title = "ABBS HUB | MM2",
+    Desc = "Edicion especial. Creado por fxzle."
+})
+
+Visuales:Section({ Title = "ESP ROLES", Icon = "eye" })
+
+local espActive = false
+local highlights = {}
+
+local function hasRoleItem(player, char)
+    local backpack = player:FindFirstChildOfClass("Backpack")
+    local function hasItem(name)
+        return (char and char:FindFirstChild(name))
+            or (backpack and backpack:FindFirstChild(name))
+            or player:FindFirstChild(name)
+    end
+    if hasItem("Knife") then return "Murder" end
+    if hasItem("Gun") then return "Sheriff" end
+    return nil
+end
+
+local function updateESP()
+    local Players = game:GetService("Players")
+    local lp = Players.LocalPlayer
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= lp then
+            local char = player.Character
+            local existing = highlights[player]
+            if espActive and char then
+                local role = hasRoleItem(player, char)
+                local fillColor = Color3.fromRGB(0, 255, 100)
+                if role == "Murder" then
+                    fillColor = Color3.fromRGB(255, 50, 50)
+                elseif role == "Sheriff" then
+                    fillColor = Color3.fromRGB(50, 150, 255)
+                end
+                if existing and existing.Parent then
+                    existing.FillColor = fillColor
+                    existing.Adornee = char
+                else
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "ABBS_Highlight"
+                    hl.Adornee = char
+                    hl.FillTransparency = 0.4
+                    hl.OutlineTransparency = 0
+                    hl.FillColor = fillColor
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.Parent = char
+                    highlights[player] = hl
+                end
+            else
+                if existing then
+                    pcall(function() existing:Destroy() end)
+                    highlights[player] = nil
+                end
+            end
+        end
+    end
+end
+
+Visuales:Toggle({
+    Title = "ESP ROLES",
+    Icon = "eye",
+    Default = false,
+    Callback = function(v)
+        espActive = v
+        if not v then
+            for p, hl in pairs(highlights) do
+                if hl then pcall(function() hl:Destroy() end) end
+            end
+            highlights = {}
+        else
+            task.spawn(function()
+                while espActive do
+                    updateESP()
+                    task.wait(0.4)
+                end
+            end)
+        end
+    end
+})
+
+RolesTab:Section({ Title = "TELEPORTS Y AIMBOT DE ROLES", Icon = "crosshair" })
+
+RolesTab:Button({
+    Title = "TELEPORT A PISTOLA CAIDA",
+    Icon = "navigation",
+    Callback = function()
+        task.defer(function()
+            local lp = game.Players.LocalPlayer
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj.Name == "GunDrop" and obj:IsA("BasePart") then
+                    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                        lp.Character.HumanoidRootPart.CFrame = obj.CFrame + Vector3.new(0, 2.5, 0)
+                        break
+                    end
+                end
+            end
+        end)
+    end
+})
+
+local aimMurderActive = false
+local aimMurderPart = "Cabeza"
+local aimSheriffActive = false
+local aimSheriffPart = "Cabeza"
+local aimSmoothness = 5
+
+RolesTab:Toggle({
+    Title = "AIMBOT MURDER (ON/OFF)",
+    Icon = "crosshair",
+    Default = false,
+    Callback = function(v)
+        aimMurderActive = v
+        ABBSHUB_UI:Notify({
+            Title = "ABBS HUB | AIMBOT MURDER",
+            Content = v and "Estado: [ON]" or "Estado: [OFF]",
+            Duration = 2
+        })
+    end
+})
+
+RolesTab:Dropdown({
+    Title = "PARTE OBJETIVO (MURDER)",
+    Icon = "crosshair",
+    Values = {"Cabeza", "Torso"},
+    Default = "Cabeza",
+    Callback = function(v) aimMurderPart = v end
+})
+
+RolesTab:Toggle({
+    Title = "AIMBOT SHERIFF (ON/OFF)",
+    Icon = "crosshair",
+    Default = false,
+    Callback = function(v)
+        aimSheriffActive = v
+        ABBSHUB_UI:Notify({
+            Title = "ABBS HUB | AIMBOT SHERIFF",
+            Content = v and "Estado: [ON]" or "Estado: [OFF]",
+            Duration = 2
+        })
+    end
+})
+
+RolesTab:Dropdown({
+    Title = "PARTE OBJETIVO (SHERIFF)",
+    Icon = "crosshair",
+    Values = {"Cabeza", "Torso"},
+    Default = "Cabeza",
+    Callback = function(v) aimSheriffPart = v end
+})
+
+RolesTab:Slider({
+    Title = "SUAVIDAD AIMBOT",
+    Icon = "zap",
+    Value = { Min = 1, Max = 20, Default = 5 },
+    Callback = function(value) aimSmoothness = value end
+})
+
+local function getTargetPart(player, partName)
+    local char = player.Character
+    if not char then return nil end
+    return char:FindFirstChild(partName)
+end
+
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local Camera = workspace.CurrentCamera
+    local lp = Players.LocalPlayer
+    local RunService = game:GetService("RunService")
+    RunService.RenderStepped:Connect(function()
+        local alpha = math.clamp(aimSmoothness / 20, 0.05, 1)
+        if aimMurderActive then
+            pcall(function()
+                local closestTarget = nil
+                local shortestDist = math.huge
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= lp and player.Character then
+                        if hasRoleItem(player, player.Character) == "Murder" then
+                            local partName = (aimMurderPart == "Cabeza") and "Head" or "HumanoidRootPart"
+                            local target = getTargetPart(player, partName)
+                            if target then
+                                local dist = (Camera.CFrame.Position - target.Position).Magnitude
+                                if dist < shortestDist then
+                                    shortestDist = dist
+                                    closestTarget = target
+                                end
+                            end
+                        end
+                    end
+                end
+                if closestTarget then
+                    local camPos = Camera.CFrame.Position
+                    Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(camPos, closestTarget.Position), alpha)
+                end
+            end)
+        end
+        if aimSheriffActive then
+            pcall(function()
+                local closestTarget = nil
+                local shortestDist = math.huge
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= lp and player.Character then
+                        if hasRoleItem(player, player.Character) == "Sheriff" then
+                            local partName = (aimSheriffPart == "Cabeza") and "Head" or "HumanoidRootPart"
+                            local target = getTargetPart(player, partName)
+                            if target then
+                                local dist = (Camera.CFrame.Position - target.Position).Magnitude
+                                if dist < shortestDist then
+                                    shortestDist = dist
+                                    closestTarget = target
+                                end
+                            end
+                        end
+                    end
+                end
+                if closestTarget then
+                    local camPos = Camera.CFrame.Position
+                    Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(camPos, closestTarget.Position), alpha)
+                end
+            end)
+        end
+    end)
+end)
+
+local noclipActive = false
+local noclipManual = false
+local farmActive = false
+local flySpeed = 35
+local bodyGyro = nil
+local bodyVelFly = nil
+
+local function aplicarNoclip(estado)
+    local char = game.Players.LocalPlayer.Character
+    if not char then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not estado
+            part.CanTouch = true
+        end
+    end
+end
+
+local function stopFlight()
+    if bodyGyro then pcall(function() bodyGyro:Destroy() end) bodyGyro = nil end
+    if bodyVelFly then pcall(function() bodyVelFly:Destroy() end) bodyVelFly = nil end
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local hrp = char.HumanoidRootPart
+        if hrp:FindFirstChild("ABBS_FlyGyro") then hrp.ABBS_FlyGyro:Destroy() end
+        if hrp:FindFirstChild("ABBS_FlyVel") then hrp.ABBS_FlyVel:Destroy() end
+        hrp.AssemblyLinearVelocity = Vector3.zero
+    end
+end
+
+local COIN_NAMES = {
+    ["Coin"] = true,
+    ["CoinDrop"] = true,
+    ["CoinContainer"] = true,
+    ["Coin_"] = true,
+    ["Money"] = true,
+    ["Cash"] = true,
+}
+
+local function isCoinPart(obj)
+    if not obj or not obj:IsA("BasePart") then return false end
+    if COIN_NAMES[obj.Name] then return true end
+    local lower = obj.Name:lower()
+    return lower:find("coin") or lower:find("money") or lower:find("cash")
+end
+
+local function findGlobalCoin(hrp)
+    local bestCoin, shortestDist = nil, math.huge
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if isCoinPart(obj) and obj.Transparency < 1 then
+            local dist = (hrp.Position - obj.Position).Magnitude
+            if dist < shortestDist then
+                shortestDist = dist
+                bestCoin = obj
+            end
+        end
+    end
+    return bestCoin
+end
+
+FarmTab:Section({ Title = "AUTOFARM FLOTANTE (VOLANDO SUAVE)", Icon = "coins" })
+
+FarmTab:Toggle({
+    Title = "FARM COIN VUELO SUAVE (TODO EL MAPA)",
+    Icon = "coins",
+    Default = false,
+    Callback = function(v)
+        farmActive = v
+        if v then
+            noclipActive = true
+            aplicarNoclip(true)
+            task.spawn(function()
+                while noclipActive do
+                    aplicarNoclip(true)
+                    task.wait(0.05)
+                end
+            end)
+            task.spawn(function()
+                local lp = game.Players.LocalPlayer
+                while farmActive do
+                    local char = lp.Character
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    local hum = char and char:FindFirstChildOfClass("Humanoid")
+                    if hrp and hum and hum.Health > 0 then
+                        local coin = findGlobalCoin(hrp)
+                        if coin and coin.Parent then
+                            if not bodyVelFly or bodyVelFly.Parent ~= hrp then
+                                stopFlight()
+                                bodyGyro = Instance.new("BodyGyro")
+                                bodyGyro.Name = "ABBS_FlyGyro"
+                                bodyGyro.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+                                bodyGyro.P = 10000
+                                bodyGyro.D = 800
+                                bodyGyro.CFrame = hrp.CFrame
+                                bodyGyro.Parent = hrp
+                                bodyVelFly = Instance.new("BodyVelocity")
+                                bodyVelFly.Name = "ABBS_FlyVel"
+                                bodyVelFly.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+                                bodyVelFly.Velocity = Vector3.zero
+                                bodyVelFly.Parent = hrp
+                            end
+                            local targetPos = coin.Position + Vector3.new(0, 0.5, 0)
+                            local direction = targetPos - hrp.Position
+                            local dist = direction.Magnitude
+                            bodyGyro.CFrame = CFrame.new(hrp.Position, targetPos)
+                            if dist > 1.8 then
+                                local speed = math.min(flySpeed, dist * 6)
+                                bodyVelFly.Velocity = direction.Unit * speed
+                            else
+                                bodyVelFly.Velocity = Vector3.zero
+                                if firetouchinterest then
+                                    pcall(function()
+                                        firetouchinterest(hrp, coin, 0)
+                                        task.wait()
+                                        firetouchinterest(hrp, coin, 1)
+                                    end)
+                                end
+                                pcall(function() hrp.CFrame = coin.CFrame end)
+                            end
+                        else
+                            stopFlight()
+                        end
+                    else
+                        stopFlight()
+                    end
+                    task.wait(0.02)
+                end
+                stopFlight()
+            end)
+        else
+            stopFlight()
+            if not noclipManual then
+                noclipActive = false
+                aplicarNoclip(false)
+            end
+        end
+    end
+})
+
+FarmTab:Slider({
+    Title = "VELOCIDAD DE VUELO",
+    Icon = "zap",
+    Value = { Min = 20, Max = 60, Default = 35 },
+    Callback = function(value) flySpeed = value end
+})
+
+TrollTab:Section({ Title = "ACCIONES Y MOVIMIENTO", Icon = "zap" })
+
+TrollTab:Toggle({
+    Title = "NOCLIP (ATRAVESAR PAREDES)",
+    Icon = "shield",
+    Default = false,
+    Callback = function(v)
+        noclipManual = v
+        noclipActive = v or farmActive
+        aplicarNoclip(noclipActive)
+        if v then
+            task.spawn(function()
+                while noclipActive do
+                    aplicarNoclip(true)
+                    task.wait(0.05)
+                end
+            end)
+        end
+    end
+})
+
+TrollTab:Button({
+    Title = "TELEPORT AL SHERIFF",
+    Icon = "crosshair",
+    Callback = function()
+        task.defer(function()
+            local Players = game:GetService("Players")
+            local lp = Players.LocalPlayer
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= lp and player.Character then
+                    if hasRoleItem(player, player.Character) == "Sheriff" then
+                        local char = player.Character
+                        if char:FindFirstChild("HumanoidRootPart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                            lp.Character.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                        end
+                        break
+                    end
+                end
+            end
+        end)
+    end
+})
+
+Settings:Section({ Title = "COMUNIDAD E INFORMACION", Icon = "info" })
+Settings:Paragraph({ Title = "CREDITOS", Desc = "BY FXZLE" })
+
+Settings:Button({
+    Title = "COPIAR DISCORD",
+    Icon = "copy",
+    Callback = function()
+        pcall(function() setclipboard("https://discord.gg/cvUTZS7MF") end)
+    end
+})
+
+ABBSHUB_UI:Notify({
+    Title = "ABBS HUB",
+    Content = "Script cargado correctamente",
+    Duration = 4
+})
